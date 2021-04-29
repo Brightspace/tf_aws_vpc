@@ -12,7 +12,7 @@ resource "aws_internet_gateway" "mod" {
 
 resource "aws_route_table" "public" {
   vpc_id           = "${aws_vpc.mod.id}"
-  propagating_vgws = ["${var.public_propagating_vgws}"]
+  propagating_vgws = "${var.public_propagating_vgws}"
   tags             = "${merge(var.tags, map("Name", format("%s-rt-public", var.name)))}"
 }
 
@@ -31,7 +31,7 @@ resource "aws_route" "private_nat_gateway" {
 
 resource "aws_route_table" "private" {
   vpc_id           = "${aws_vpc.mod.id}"
-  propagating_vgws = ["${var.private_propagating_vgws}"]
+  propagating_vgws = "${var.private_propagating_vgws}"
   count            = "${length(var.azs)}"
   tags             = "${merge(var.tags, map("Name", format("%s-rt-private-%s", var.name, element(var.azs, count.index))))}"
 }
@@ -55,7 +55,7 @@ resource "aws_subnet" "database" {
 resource "aws_db_subnet_group" "database" {
   name        = "${var.name}-rds-subnet-group"
   description = "Database subnet groups for ${var.name}"
-  subnet_ids  = ["${aws_subnet.database.*.id}"]
+  subnet_ids  = "${aws_subnet.database.*.id}"
   tags        = "${merge(var.tags, map("Name", format("%s-database-subnet-group", var.name)))}"
   count       = "${length(var.database_subnets) > 0 ? 1 : 0}"
 }
