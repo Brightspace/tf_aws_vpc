@@ -13,13 +13,13 @@ variable "private_subnets" {
 }
 
 variable "database_subnets" {
-  type        = "list"
+  type        = list
   description = "A list of database subnets"
   default     = []
 }
 
 variable "elasticache_subnets" {
-  type        = "list"
+  type        = list
   description = "A list of elasticache subnets"
   default     = []
 }
