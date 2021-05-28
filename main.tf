@@ -2,18 +2,18 @@ resource "aws_vpc" "mod" {
   cidr_block           = var.cidr
   enable_dns_hostnames = var.enable_dns_hostnames
   enable_dns_support   = var.enable_dns_support
-  tags                 = merge(var.tags, map("Name", format("%s", var.name)))
+  tags                 = merge(var.tags, tomap({"Name" = format("%s", var.name)}))
 }
 
 resource "aws_internet_gateway" "mod" {
   vpc_id = aws_vpc.mod.id
-  tags   = merge(var.tags, map("Name", format("%s-igw", var.name)))
+  tags   = merge(var.tags, tomap({"Name" = format("%s-igw", var.name)}))
 }
 
 resource "aws_route_table" "public" {
   vpc_id           = aws_vpc.mod.id
   propagating_vgws = var.public_propagating_vgws
-  tags             = merge(var.tags, map("Name", format("%s-rt-public", var.name)))
+  tags             = merge(var.tags, tomap({"Name" = format("%s-rt-public", var.name)}))
 }
 
 resource "aws_route" "public_internet_gateway" {
@@ -26,14 +26,14 @@ resource "aws_route" "private_nat_gateway" {
   route_table_id         = element(aws_route_table.private.*.id, count.index)
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = element(aws_nat_gateway.natgw.*.id, count.index)
-  count                  = length(var.azs) * lookup(map(var.enable_nat_gateway, 1), "true", 0)
+  count                  = length(var.azs) * lookup(tomap({(var.enable_nat_gateway) = 1}), "true", 0)
 }
 
 resource "aws_route_table" "private" {
   vpc_id           = aws_vpc.mod.id
   propagating_vgws = var.private_propagating_vgws
   count            = length(var.azs)
-  tags             = merge(var.tags, map("Name", format("%s-rt-private-%s", var.name, element(var.azs, count.index))))
+  tags             = merge(var.tags, tomap({"Name" = format("%s-rt-private-%s", var.name, element(var.azs, count.index))}))
 }
 
 resource "aws_subnet" "private" {
@@ -41,7 +41,7 @@ resource "aws_subnet" "private" {
   cidr_block        = var.private_subnets[count.index]
   availability_zone = element(var.azs, count.index)
   count             = length(var.private_subnets)
-  tags              = merge(var.tags, map("Name", format("%s-subnet-private-%s", var.name, element(var.azs, count.index))), map("Tier", "private"))
+  tags              = merge(var.tags, tomap({"Name"= format("%s-subnet-private-%s", var.name, element(var.azs, count.index))}), tomap({"Tier" = "private"}))
 }
 
 resource "aws_subnet" "database" {
@@ -49,14 +49,14 @@ resource "aws_subnet" "database" {
   cidr_block        = var.database_subnets[count.index]
   availability_zone = element(var.azs, count.index)
   count             = length(var.database_subnets)
-  tags              = merge(var.tags, map("Name", format("%s-database-subnet-%s", var.name, element(var.azs, count.index))), map("Tier", "database"))
+  tags              = merge(var.tags, tomap({"Name"= format("%s-database-subnet-%s", var.name, element(var.azs, count.index))}), tomap({"Tier" = "database"}))
 }
 
 resource "aws_db_subnet_group" "database" {
   name        = "${var.name}-rds-subnet-group"
   description = "Database subnet groups for ${var.name}"
   subnet_ids  = aws_subnet.database.*.id
-  tags        = merge(var.tags, map("Name", format("%s-database-subnet-group", var.name)))
+  tags        = merge(var.tags, tomap({"Name" = format("%s-database-subnet-group", var.name)}))
   count       = length(var.database_subnets) > 0 ? 1 : 0
 }
 
@@ -65,7 +65,7 @@ resource "aws_subnet" "elasticache" {
   cidr_block        = var.elasticache_subnets[count.index]
   availability_zone = element(var.azs, count.index)
   count             = length(var.elasticache_subnets)
-  tags              = merge(var.tags, map("Name", format("%s-elasticache-subnet-%s", var.name, element(var.azs, count.index))), map("Tier", "elasticache"))
+  tags              = merge(var.tags, tomap({"Name" = format("%s-elasticache-subnet-%s", var.name, element(var.azs, count.index))}), tomap({"Tier" = "elasticache"}))
 }
 
 resource "aws_elasticache_subnet_group" "elasticache" {
@@ -80,20 +80,20 @@ resource "aws_subnet" "public" {
   cidr_block        = var.public_subnets[count.index]
   availability_zone = element(var.azs, count.index)
   count             = length(var.public_subnets)
-  tags              = merge(var.tags, map("Name", format("%s-subnet-public-%s", var.name, element(var.azs, count.index))), map("Tier", "public"))
+  tags              = merge(var.tags, tomap({"Name" = format("%s-subnet-public-%s", var.name, element(var.azs, count.index))}), tomap({"Tier" = "public"}))
 
   map_public_ip_on_launch = var.map_public_ip_on_launch
 }
 
 resource "aws_eip" "nateip" {
   vpc   = true
-  count = length(var.azs) * lookup(map(var.enable_nat_gateway, 1), "true", 0)
+  count = length(var.azs) * lookup(tomap({(var.enable_nat_gateway) = 1}), "true", 0)
 }
 
 resource "aws_nat_gateway" "natgw" {
   allocation_id = element(aws_eip.nateip.*.id, count.index)
   subnet_id     = element(aws_subnet.public.*.id, count.index)
-  count         = length(var.azs) * lookup(map(var.enable_nat_gateway, 1), "true", 0)
+  count         = length(var.azs) * lookup(tomap({(var.enable_nat_gateway) = 1}), "true", 0)
 
   depends_on = [aws_internet_gateway.mod]
 }
